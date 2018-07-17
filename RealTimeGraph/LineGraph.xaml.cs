@@ -493,7 +493,7 @@ namespace RealTimeGraph {
                     content.dataAngledisp_box.Text = angle.ToString();
                     content.dataAngle2disp_box.Text = angle2.ToString();
                     content.dataxpost_box.Text = x_post.ToString();
-                    content.dataypost_box.Text = y_post.ToString();
+                    content.dataypost_box.Text = y_post.ToString(); 
                 });
             }
         }
