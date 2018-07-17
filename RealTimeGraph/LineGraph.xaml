@@ -1,0 +1,200 @@
+﻿<Page
+    x:Class="RealTimeGraph.LineGraph"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:RealTimeGraph"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:oxy="using:OxyPlot.Windows"
+    mc:Ignorable="d">
+
+    <Page.DataContext>
+        <local:MainViewModel/>        
+    </Page.DataContext>
+
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />       
+        </Grid.RowDefinitions>
+
+        <!-- ###################### UWP Description Section ###################### -->
+        
+        <StackPanel Margin="0,0,0,10">
+            <TextBlock Text="C# UWP Air Track Program for Windows 10" FontSize="20" />
+            <TextBlock Text="Palmer Lab - Air Track System. Development Mode - Designed by Leonard Lee. 26 June 2018" FontSize="12"  />
+            <TextBlock Text="- Developed by Leonard Lee. 28 June 2018" FontSize="12" />
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollMode="Enabled" VerticalScrollBarVisibility="Visible" >
+            <StackPanel Orientation="Vertical" Margin="0,10,0,0" Grid.Row="1">
+
+                <!-- ###################### IMU Section ###################### -->
+
+                <TextBlock Text="Movement Data" Grid.Row="1" Margin="0,10,0,0" FontSize="18"/>
+                <StackPanel Orientation="Horizontal">
+                    <ToggleSwitch x:Name="streamSwitch" Header="Stream SensorFusion" Margin="10,10,10,0"  Toggled="streamSwitch_Toggled" />
+                    <ToggleSwitch x:Name="IMU_graph_en" Header="Graph Enable" Margin="10,10,10,0"  Toggled="IMU_graph_en_Toggled" />
+                    <StackPanel Orientation="Vertical">
+                        <TextBlock Text="Degrees " Margin="0,10,0,0" Width="100"></TextBlock>
+                        <TextBox x:Name="dataeuler_box" Text="" Margin="0,0,0,0"  Width="100" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- <oxy:PlotView Model="{Binding EulerModel}" Height="400"/> -->
+
+                <!-- ###################### PIXY Section ###################### -->
+
+                <TextBlock Text="Intialize Arduino Due Connection for PIXY Data" Grid.Row="1" Margin="0,10,0,0" FontSize="18"/>
+
+                <StackPanel Orientation="Horizontal">
+                    <ToggleSwitch x:Name="arduino_initSwitch" Header="Arduino Due Connection" Margin="10,10,10,0"  Toggled="arduino_initSwitch_Toggled" />
+                    <ToggleSwitch x:Name="arduino_readSwitch" Header="Serial Read" Margin="10,10,10,0"  Toggled="arduino_readSwitch_Toggled" />
+                    <ToggleSwitch x:Name="PIXY_graph_en" Header="Graph Enable" Margin="10,10,10,0"  Toggled="PIXY_graph_en_Toggled" />
+                    
+                    
+                </StackPanel>
+                
+
+                <StackPanel Orientation="Horizontal">   
+                    <StackPanel Orientation="Vertical">
+                        <TextBlock Text="PIXY X Raw: " Margin="10,10,0,0" Width="150" ></TextBlock>
+                        <TextBox x:Name="datax_box" HorizontalAlignment="Left" Margin="10,0,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="70" ScrollViewer.VerticalScrollBarVisibility="Visible"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Vertical">
+                        <TextBlock Text="PIXY Y Raw: " Margin="0,10,0,0" Width="150"></TextBlock>
+                        <TextBox x:Name="datay_box" HorizontalAlignment="Left" Margin="0,0,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="70" ScrollViewer.VerticalScrollBarVisibility="Visible"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Vertical">
+                        <TextBlock Text="Set Zero Point " Margin="0,10,0,0" Width="150"></TextBlock>
+                        <Button x:Name="zero_set" Click="zero_set_Click" Margin="15,0,0,0" Content="Zero"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Vertical">
+                        <TextBlock Text="Clear Graph " Margin="0,10,0,0" Width="150"></TextBlock>
+                        <Button x:Name="graph_clear" Click="graph_clear_Click" Margin="15,0,0,0" Content="Clear"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal">
+                    <StackPanel Orientation="Vertical">
+                        <TextBlock Text="PIXY X Zero: " Margin="10,10,0,0" Width="150" ></TextBlock>
+                        <TextBox x:Name="dataxzero_box" HorizontalAlignment="Left" Margin="10,0,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="70"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Vertical">
+                        <TextBlock Text="PIXY Y Zero: " Margin="0,10,0,0" Width="150"></TextBlock>
+                        <TextBox x:Name="datayzero_box" HorizontalAlignment="Left" Margin="0,0,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="70" />
+                    </StackPanel>
+
+                    <StackPanel Orientation="Vertical">
+                        <TextBlock Text="PIXY Angle Zero: " Margin="0,10,0,0" Width="150"></TextBlock>
+                        <TextBox x:Name="dataanglezero_box" HorizontalAlignment="Left" Margin="0,0,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="200" />
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal">
+                    <StackPanel Orientation="Vertical">
+                        <TextBlock Text="PIXY X Displacement: " Margin="10,10,0,0" Width="150" ></TextBlock>
+                        <TextBox x:Name="dataxdisp_box" HorizontalAlignment="Left" Margin="10,0,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="70"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Vertical">
+                        <TextBlock Text="PIXY Y Displacement: " Margin="0,10,0,0" Width="150"></TextBlock>
+                        <TextBox x:Name="dataydisp_box" HorizontalAlignment="Left" Margin="0,0,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="70" />
+                    </StackPanel>
+
+                    <StackPanel Orientation="Vertical">
+                        <TextBlock Text="PIXY Angle Actual: " Margin="0,10,0,0" Width="150"></TextBlock>
+                        <TextBox x:Name="dataangleactual_box" HorizontalAlignment="Left" Margin="0,0,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="200" />
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal">
+                    <StackPanel Orientation="Vertical">
+                        <TextBlock Text="Calculated Radius: " Margin="10,10,0,0" Width="150" ></TextBlock>
+                        <TextBox x:Name="dataradiusdisp_box" HorizontalAlignment="Left" Margin="10,0,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="70"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Vertical">
+                        <TextBlock Text="Calculated Angle: " Margin="0,10,0,0" Width="150"></TextBlock>
+                        <TextBox x:Name="dataAngledisp_box" HorizontalAlignment="Left" Margin="0,0,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="200" />
+                    </StackPanel>
+
+                    <StackPanel Orientation="Vertical">
+                        <TextBlock Text="Calculated Angle2: " Margin="0,10,0,0" Width="150"></TextBlock>
+                        <TextBox x:Name="dataAngle2disp_box" HorizontalAlignment="Left" Margin="0,0,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="200" />
+                    </StackPanel>
+
+                    <StackPanel Orientation="Vertical">
+                        <TextBlock Text="Calculated X:" Margin="0,10,0,0" Width="150"></TextBlock>
+                        <TextBox x:Name="dataxpost_box" HorizontalAlignment="Left" Margin="0,0,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="200" />
+                    </StackPanel>
+
+                    <StackPanel Orientation="Vertical">
+                        <TextBlock Text="Calculated Y: " Margin="0,10,0,0" Width="150"></TextBlock>
+                        <TextBox x:Name="dataypost_box" HorizontalAlignment="Left" Margin="0,0,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="200" />
+                    </StackPanel>
+                    
+                </StackPanel>
+
+                <oxy:PlotView Model="{Binding MazePosModel}" Height="800" Width="800" HorizontalAlignment="Left"/>
+
+
+
+            </StackPanel>
+        </ScrollViewer>
+
+
+    </Grid>
+</Page>
+
+    
+    
+    
+    <!--
+        <TextBlock Text="Air Track System - UWP Monitoring System - Leonard Lee 26 June 2018" Grid.Row="0" />
+        <ScrollViewer VerticalScrollMode="Auto" VerticalScrollBarVisibility="Auto">
+            <TextBlock Text="Select an Arduino Device:" Grid.Row="1"/>        
+            <StackPanel Orientation="Horizontal" Margin="0,10,0,0" Grid.Row="2">
+                <Button x:Name="ButtonConnectToDevice" Content="Connect to device" Margin="0,0,10,0" Click="ConnectToDevice_Click"/>
+                <Button x:Name="ButtonDisconnectFromDevice" Content="Disconnect from device" Margin="0,0,10,0" Click="DisconnectFromDevice_Click"/>
+            </StackPanel>
+            <ListBox x:Name="ConnectDevices" ItemsSource="{Binding Source={StaticResource DeviceListSource}}"  Height="250" Background="Gray" Grid.Row="3">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding InstanceId}"/>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <ToggleSwitch x:Name="streamSwitch" Header="Stream SensorFusion" HorizontalAlignment="Stretch" Margin="10,10,10,0"  Toggled="streamSwitch_Toggled" Grid.Row="4"/>
+            <oxy:PlotView Model="{Binding QuaternionModel}" Grid.Row="5"/>
+            <TextBlock HorizontalAlignment="Center" Text="{x:Bind MyValue}" TextWrapping="Wrap" VerticalAlignment="Center" Grid.Row="6" SelectionChanged="TextBlock_SelectionChanged"/>
+            <Button x:Name="back" Content="Back" HorizontalAlignment="Stretch" VerticalAlignment="Bottom" Click="back_Click" Grid.Row="7"/>
+        </ScrollViewer>
+    
+    
+    
+    
+    
+     <TextBlock Text="Select an Arduino Device:" Grid.Row="1"/>
+                
+                <ListBox x:Name="ConnectDevices" ItemsSource="{Binding Source={StaticResource DeviceListSource}}"  Height="200" Background="LightGray" Grid.Row="1">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding InstanceId}"/>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                
+                <StackPanel Orientation="Horizontal" Margin="0,10,0,0" Grid.Row="1">
+                    <Button x:Name="ButtonConnectToDevice" Content="Connect to device" Margin="0,0,10,0" Click="ConnectToDevice_Click" />
+                    <Button x:Name="ButtonDisconnectFromDevice" Content="Disconnect from device" Margin="0,0,10,0" Click="DisconnectFromDevice_Click" />
+                </StackPanel>
+
+        -->
