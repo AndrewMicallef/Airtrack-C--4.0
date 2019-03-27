@@ -487,31 +487,20 @@ namespace RealTimeGraph
             //If value is less than 360, thats fine
             //if value is more than 720,
 
-            // =============== Reset values
-            processed_x = 0;
-            processed_y = 0;
-
+            
             // =============== Gather PIXY Raw Coordinates
             var model2 = (DataContext as MainViewModel).MazePosModel;
             Int32.TryParse(array3, out x_coor);
             Int32.TryParse(array4, out y_coor);
 
+            int X = x_coor - zerox;
+            int Y = y_coor - zeroy;
+            
+            // this would be easier in radians...
+            angle_maze = (float) (DegreeToRadian((double) angle_maze) - DegreeToRadian((double) zeroangle));
+            var theta = Math.Atan2(Y, X) + DegreeToRadian(angle_maze);
 
-
-            // =============== Calculate calibrated angle
-            if (angle_maze >= zeroangle)
-            {
-                angle_actual_maze = angle_maze - zeroangle;
-            }
-
-            else if (angle_maze < zeroangle)
-            {
-                angle_actual_maze = 360 - (zeroangle - angle_maze);
-            }
-
-            // =============== Calculate X and Y Displacement   
-            x_disp = x_coor - zerox;
-            y_disp = y_coor - zeroy;
+            
 
 
             // =============== Calculate oxy_plot X and Y depending on angle
@@ -578,6 +567,12 @@ namespace RealTimeGraph
             //    else oxyplot_within_boundaries = false;
             //}
                 
+        }
+
+        
+        private double DegreeToRadian(double angle)
+        {
+            return Math.PI * angle / 180.0;
         }
 
         public async Task IMU_NeoPixel(int val)        {

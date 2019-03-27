@@ -125,10 +125,6 @@ namespace RealTimeGraph
         }
 
 
-
-
-
-        
         ///------------------------------------------ READ DATA FROM IMU FUNCTIONS -------------------------------------------------------
         public async Task readData(IData data)
         {
@@ -323,7 +319,12 @@ namespace RealTimeGraph
             await RewardWriteAsync(arduino_data_string);            
 
         }
+
+
     }
+
+
+
 }
 
 
