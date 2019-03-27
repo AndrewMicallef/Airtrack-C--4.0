@@ -1,44 +1,15 @@
 ﻿using OxyPlot;
-using OxyPlot.Series;
-using OxyPlot.Axes;
 
 using MbientLab.MetaWear;
-using MbientLab.MetaWear.Core;
-using MbientLab.MetaWear.Core.SensorFusionBosch;
-using MbientLab.MetaWear.Core.Settings;
 using MbientLab.MetaWear.Data;
-using MbientLab.MetaWear.Sensor;
-using MbientLab.MetaWear.Peripheral;
-using MbientLab.MetaWear.Peripheral.Led;
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
-using System.Diagnostics;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Runtime.CompilerServices;
-using System.Collections.ObjectModel;
-
-
-
-using Windows.ApplicationModel.Core;
-using Windows.Devices.Bluetooth;
-using Windows.Devices.Enumeration;
-using Windows.Devices.SerialCommunication;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
-using Windows.Globalization.DateTimeFormatting;
-using Windows.UI.Core;
 using Windows.UI.Xaml;
-using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Navigation;
 using Windows.Storage;
-using Windows.Storage.Streams;
-using System.Text;
 
 namespace RealTimeGraph
 {
