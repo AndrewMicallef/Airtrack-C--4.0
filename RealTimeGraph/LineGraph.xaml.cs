@@ -2,7 +2,7 @@
 /* Name: Air Track C# UWP Program
  * Function: Recieve sensor values. Output Values.
  * Inputs: Mbientlab IMU, Arduino Due (PIXY)
- * Description: Tutorial that has been modified.
+ * Description: Tutorial that has been modified. Severely.
  * Last Modified: 28 June 2018
  * Developer: Leonard Lee
  */
@@ -11,6 +11,7 @@
 using OxyPlot;
 using OxyPlot.Series;
 using OxyPlot.Axes;
+using OxyPlot.Windows;
 
 using MbientLab.MetaWear;
 using MbientLab.MetaWear.Core;
@@ -47,6 +48,7 @@ using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
 using Windows.Storage;
 using Windows.Storage.Streams;
+using Windows.System.Threading;
 
 ///################################################## PROGRAM START ###############################################################################################
 
@@ -57,20 +59,32 @@ namespace RealTimeGraph {
     ///Define the plot and plot types
     public class MainViewModel
     {
-        public const int MAX_DATA_SAMPLES = 10000;
+        public const int MAX_DATA_SAMPLES = 960;
         public MainViewModel(){
             MazePosModel = new PlotModel
             { //HEADER TITLE
                 Title = "Maze Position",
                 IsLegendVisible = true
             };
-            MazePosModel.Series.Add(new LineSeries
+            MazePosModel.Series.Add(new LineSeries //actual plot
             { //TITLE
                 MarkerStroke = OxyColor.FromRgb(1, 0, 0),
                 LineStyle = LineStyle.Solid,
                 Title = "Current Position"
             });
-            MazePosModel.Series.Add(new LineSeries
+            MazePosModel.Series.Add(new LineSeries //maze plot
+            { //TITLE
+                MarkerStroke = OxyColor.FromRgb(0, 1, 0),
+                LineStyle = LineStyle.Solid,
+                Title = ""
+            });
+            MazePosModel.Series.Add(new LineSeries //maze plot icon low
+            { //TITLE
+                MarkerStroke = OxyColor.FromRgb(0, 1, 0),
+                LineStyle = LineStyle.Solid,
+                Title = ""
+            });
+            MazePosModel.Series.Add(new LineSeries //maze plot icon high
             { //TITLE
                 MarkerStroke = OxyColor.FromRgb(0, 1, 0),
                 LineStyle = LineStyle.Solid,
@@ -141,82 +155,6 @@ namespace RealTimeGraph {
        
     public sealed partial class LineGraph : Page
     {
-        ///------------------------------------------ GLOBAL VARIABLES --------------------------------------------------------------
-
-        /// UI Button Global Variables 
-        public bool stream_state = false;
-        public bool IMU_graph_en_state = false;
-        public bool folder_state = false;
-        public bool PIXY_graph_en_state = false;
-        public bool PIXY_graph_clear_state = false;
-
-        /// IMU Global Variables                  
-        public IMetaWearBoard metawear;        
-        public ISensorFusionBosch sensorfusion;
-        public ISettings settings;
-        
-        /// Stream Port + File Global Variables
-        public string file_name;
-        public Windows.Storage.StorageFolder folder;
-        public Windows.Storage.StorageFolder mainFolder;
-        public Windows.Storage.StorageFile file;
-        public IRandomAccessStream csv_stream;
-
-        /// CSV Data Global Variables
-        public int i = 0;
-        public string buffer_string = "";
-        public string string1 = "";
-
-        /// Timer Global Variables
-        public double time_base_ms = 0;
-        public double time_base_sec = 0;
-        public double time_base_min = 0;
-        public double time_base_hour = 0;
-        public double base_elapsed_millisec = 0;
-        public double time_current_ms = 0;
-        public double time_current_sec = 0;
-        public double time_current_min = 0;
-        public double time_current_hour = 0;
-        public double current_elapsed_millisec = 0;
-
-        /// Stream OXY Plot Global Variables
-        public double graph_time_ms = 0;
-        public bool time_base_set = false;
-        public float angle_maze = 0;
-        public float angle_actual_maze = 0;
-
-        /// Arduino Due Serial Port Global Variables
-        public DataReader dataReader;
-        public SerialDevice serialPortDue;
-
-        /// Arduino Due PIXY Data Global Arrays Variables
-        public string array1 = "";
-        public string array2 = "";
-        public string array3 = "0";
-        public string array4 = "0";
-
-        public int zerox = 0;
-        public int zeroy = 0;
-        public int arm_length = 112;
-        public int arm_width = 35;
-
-        public float zeroangle = 0;
-        public int x_coor = 0;
-        public int y_coor = 0;
-        public int x_disp = 0;
-        public int y_disp = 0;
-        public volatile bool x_neg_dir = false;
-        public volatile bool y_neg_dir = false;
-        public int radius = 0;
-        public float angle = 0;
-        public float angle2 = 0;
-
-        public double x_post = 0;
-        public double y_post = 0;
-
-
-
-
         ///------------------------------------------ PAGE START FUNCTIONS ----------------------------------------------------------
         public LineGraph()
         {
@@ -224,520 +162,38 @@ namespace RealTimeGraph {
         }
 
 
-        ///------------------------------------------ NAVIGATION TO FUNCTIONS -------------------------------------------------------
-        protected async override void OnNavigatedTo(NavigationEventArgs e)
+        ///------------------------------------------ NAVIGATION TO Window -------------------------------------------------------
+        protected async override void OnNavigatedTo(NavigationEventArgs e) //To do at Initialsation
         {
-            base.OnNavigatedTo(e);
-            var model1 = (DataContext as MainViewModel).EulerModel;
-            Draw_X_Maze_plot();
+            /*  Functions:  1. Open up FolderPicker()
+             *              2. Draw X_Maze_plot
+             //*              3. Update Plots
+             */ 
+            base.OnNavigatedTo(e);     
 
-            LineGraph content = Frame.Content as LineGraph;
+            //Folder location selection
+            await PickFolder();
+            csv_stream = await file.OpenAsync(Windows.Storage.FileAccessMode.ReadWrite, StorageOpenOptions.AllowOnlyReaders);            
 
-            //Sensor Configuration
-            metawear = MbientLab.MetaWear.Win10.Application.GetMetaWearBoard(e.Parameter as BluetoothLEDevice);
-            sensorfusion = metawear.GetModule<ISensorFusionBosch>();
-            sensorfusion.Configure(mode: Mode.Ndof, ar: AccRange._2g, gr: GyroRange._500dps);
-            ISettings settings = metawear.GetModule<ISettings>();
-            settings.EditBleConnParams(maxConnInterval: 7.5f);    
-            IMacro macro = metawear.GetModule<IMacro>();
+            //Initialise IMU
+            await IMU_initialize(e);
+            sensorfusion.Stop();
 
-            await PickFolder();         
-            csv_stream = await file.OpenAsync(Windows.Storage.FileAccessMode.ReadWrite);            
+            //await IMU_EulerAddRoute();
 
-            await sensorfusion.EulerAngles.AddRouteAsync(source => source.Stream(async data =>
-            {
-                var value = data.Value<EulerAngles>(); 
-                if (file != null)
-                {
-                    //If stream is enabled
-                    if (stream_state == true)
-                    {
-                        saveToCSV(data);      
-                        if (time_base_set == false)
-                        {
-                            time_base_ms = data.Timestamp.Millisecond;    
-                            time_base_sec = data.Timestamp.Second;
-                            time_base_min = data.Timestamp.Minute;
-                            time_base_hour = data.Timestamp.Hour;
-                            base_elapsed_millisec = time_base_ms + (1000 * time_base_sec) + (1000 * 60 * time_base_min) + (1000 * 60 * 60 * time_base_hour);
-                            time_base_set = true;
-                        }
+            //IMU_Euler_enable();
 
-                        time_current_ms = data.Timestamp.Millisecond;
-                        time_current_sec = data.Timestamp.Second;
-                        time_current_min = data.Timestamp.Minute;
-                        time_current_hour = data.Timestamp.Hour;
-                        current_elapsed_millisec = time_current_ms + (1000 * time_current_sec) + (1000 * 60 * time_current_min) + (1000 * 60 * 60 * time_current_hour);
-                        graph_time_ms = current_elapsed_millisec - base_elapsed_millisec;
+            //Draw Maze
+            //await Draw_X_Outline_plot();
 
-                        angle_maze = value.Heading;
+            //Start UI Refresher/Update Timer
+            UIPeriodicTimerSetup();
 
-                        CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal,() =>
-                        {
-                            content.dataeuler_box.Text = value.Heading.ToString() + "°";
-                        });
-
-                        if (IMU_graph_en_state == true)
-                        {
-                            await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.High, () =>
-                            {
-                                (model1.Series[0] as LineSeries).Points.Add(new DataPoint(graph_time_ms, value.Heading));   
-                                model1.InvalidatePlot(true);
-                                if (graph_time_ms > MainViewModel.MAX_DATA_SAMPLES)
-                                {
-                                    model1.Axes[1].Reset();
-                                    model1.Axes[1].Maximum = graph_time_ms;
-                                    model1.Axes[1].Minimum = (graph_time_ms - MainViewModel.MAX_DATA_SAMPLES);
-                                    model1.Axes[1].Zoom(model1.Axes[1].Minimum, model1.Axes[1].Maximum);
-                                }
-                            });
-                        }
-                    }
-                }
-
-                else
-                {
-                    //Do nothing if file is null.
-                }
-            }));
         }
 
-
-        
-        
-        
-        ///------------------------------------------ READ DATA FROM IMU FUNCTIONS -------------------------------------------------------
-        public async void readData(IData data)
-        {
-            var buffer = data.Value<EulerAngles>();
-            System.Diagnostics.Debug.WriteLine(buffer);
-        }
-
-        
-        
-        
-        
-        ///------------------------------------------ SAVE IMU DATA TO STREAM -------------------------------------------------------------
-        public async void saveToCSV(IData data)
-        {
-
-            //var data_entry = string.Format("{0}", data.ToString());
-            var data_quaternion = data.Value<EulerAngles>();
-            var data_q_ts = data.FormattedTimestamp;
-            var data_raw = string.Format("{0}", data.ToString() + "\r\n");
-            var data_q_H = data_quaternion.Heading;
-            var data_q_Y = data_quaternion.Yaw;            
-            
-            using (var outputStream = csv_stream.GetOutputStreamAt(csv_stream.Size))
-            {
-                using (var dataWriter = new Windows.Storage.Streams.DataWriter(outputStream))
-                {
-                    string1 = data_q_ts + "," + data_q_H + "\r\n";
-                    if (i < 5000)
-                    {
-                        buffer_string = buffer_string + string1;
-                        i++;
-                    }
-
-                    else
-                    {
-                        buffer_string = buffer_string + string1;
-                        dataWriter.WriteString(buffer_string);
-                        await dataWriter.StoreAsync();
-                        await outputStream.FlushAsync();
-                        buffer_string = ""; //flush varaible
-                        i = 0; //reset counter
-                    }                    
-                }                
-            }
-        }
-        
-        
-        
-        
-        ///------------------------------------------ UI FOLDER SELECTION FUNCTION -------------------------------------------------------
-        public async Task PickFolder()
-        {
-            var folderPicker = new Windows.Storage.Pickers.FolderPicker();
-            folderPicker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.Desktop;
-            folderPicker.FileTypeFilter.Add(".csv");
-            folderPicker.FileTypeFilter.Add(".txt");
-
-            while (folder == null)
-            {
-                folder = await folderPicker.PickSingleFolderAsync();
-            }            
-
-            if (folder != null)
-            {
-                // Application now has read/write access to all contents in the picked folder (including other sub-folder contents)
-                string current_time = DateTime.Now.ToString("dd-MM-yyyy_hh-mm-ss");
-                file_name = "IMU_Sensor_" + current_time + ".csv";
-                Windows.Storage.AccessCache.StorageApplicationPermissions.FutureAccessList.AddOrReplace("PickedFolderToken", folder); 
-                mainFolder = await folder.CreateFolderAsync("Movement_Data", CreationCollisionOption.OpenIfExists);        
-                file = await mainFolder.CreateFileAsync(file_name, CreationCollisionOption.GenerateUniqueName);
-                List<string> lines = new List<string>() { "TimeStamps , Heading"}; 
-                await FileIO.WriteLinesAsync(file, lines);
-            }
-
-            else
-            {
-                // the user didn't select any folder
-            }
-        }
-
-        ///------------------------------------------ Arduino Due PIXY Initialization FUNCTION -----------------------------------------
-        public async void InitializeConnection()
-        {
-            var aqs = SerialDevice.GetDeviceSelectorFromUsbVidPid(0x2341, 0x003D); //0x2A03, 0x0057 (Uno On Table = 0x2341, 0x0043)
-            var info = await Windows.Devices.Enumeration.DeviceInformation.FindAllAsync(aqs);
-
-            // Get connection data
-            serialPortDue = await SerialDevice.FromIdAsync(info[0].Id);
-
-            // Configure serial settings
-            serialPortDue.DataBits = 8;
-            serialPortDue.BaudRate = 115200;
-            serialPortDue.Parity = SerialParity.None;
-            serialPortDue.Handshake = SerialHandshake.None;
-            serialPortDue.StopBits = SerialStopBitCount.One;
-            serialPortDue.ReadTimeout = TimeSpan.FromMilliseconds(1000);
-            serialPortDue.WriteTimeout = TimeSpan.FromMilliseconds(1000);
-            dataReader = new DataReader(serialPortDue.InputStream);
-        }
-
-
-
-
-        ///------------------------------------------ Arduino Due PIXY Read data FUNCTION ----------------------------------------------
-        private async Task ReadAsync()
-        {
-            /* Active Method:
-                 * 1. Read array1 1 byte
-                 * 2. Read value
-                 * 2a. If number, write to array2
-                 * 2b. If " ", array3 = array2. Clear array2
-                 * 2c. If " ", array4 = array2. Clear array2
-                 */
-
-            try
-            {
-                Task<uint> loadAsyncTask;
-                dataReader.ByteOrder = ByteOrder.BigEndian;
-                dataReader.InputStreamOptions = InputStreamOptions.ReadAhead;
-                dataReader.UnicodeEncoding = UnicodeEncoding.Utf8;
-                uint readBufferLength = 1;
-
-                loadAsyncTask = dataReader.LoadAsync(readBufferLength).AsTask();
-                uint ReadAsyncBytes = await loadAsyncTask;
-
-                if (ReadAsyncBytes > 0)
-                {
-                    string data = dataReader.ReadString(readBufferLength);
-                    //System.Diagnostics.Debug.Write(data);
-                    array1 = data;
-                }                
-
-                if (array1[0] == (' '))
-                {
-                    array3 = array2;                    
-                    array2 = ""; //
-                }
-
-                else if (array1[0] == ('\r'))
-                {
-                    array4 = array2;
-                    array2 = ""; //<-- write array3 function here to the graph
-                    oxyplot_MazePosModel();
-                }
-
-                else if (array1[0] == ('\n'))
-                {
-                    //do nothing
-                }
-
-                else
-                {
-                    array2 += array1[0];
-                }
-                
-                datax_box.Text = array3;
-                datay_box.Text = array4;
-            }
-
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine(ex.Message);                
-            }
-        }
-
-
-        ///------------------------------------------ UI Based Arduino Read Enable Function ---------------------------------------------
-        public async void Read_Serial_data()
-        {
-            LineGraph content = Frame.Content as LineGraph;
-            while (arduino_readSwitch.IsOn)
-            {
-                await ReadAsync();
-                await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
-                {
-                    content.datax_box.Text = array3;
-                    content.datay_box.Text = array4;
-                    content.dataxzero_box.Text = zerox.ToString();
-                    content.datayzero_box.Text = zeroy.ToString();
-                    content.dataanglezero_box.Text = zeroangle.ToString();
-                    content.dataxdisp_box.Text = x_disp.ToString();
-                    content.dataydisp_box.Text = y_disp.ToString();
-                    content.dataangleactual_box.Text = angle_actual_maze.ToString();
-                    content.dataradiusdisp_box.Text = radius.ToString();
-                    content.dataAngledisp_box.Text = angle.ToString();
-                    content.dataAngle2disp_box.Text = angle2.ToString();
-                    content.dataxpost_box.Text = x_post.ToString();
-                    content.dataypost_box.Text = y_post.ToString(); 
-                });
-            }
-        }
-
-        
-
-            ///------------------------------------------ Write PIXY Data to Graph ---------------------------------------------------------
-            public async void oxyplot_MazePosModel()
-        {
-            //double unit_circle_x = 0;
-            //double unit_circle_y = 0;            
-
-            double oxyplot_x = 0;
-            double oxyplot_y = 0;
-
-            /* Input variables:
-             * array3 = x string
-             * array4 = y string
-             * angle_maze = raw maze angle
-             * zerox
-             * zeroy
-             * zeroangle
-             * angle_actual_maze = actual angle after calibration
-             */
-
-
-            //Gather PIXY Raw Coordinates
-            var model2 = (DataContext as MainViewModel).MazePosModel;
-            Int32.TryParse(array3, out x_coor);            
-            Int32.TryParse(array4, out y_coor);
-            
-            //Calibrate the rotation of the IMU sensor
-            //measured(150) - zero point(30), actual = 120. If measured >= zero point, actual = measured - zero point
-            //If measured (10) - zero (30). Else if measured < zero point, 360 - (zero point - measured)
-            //If value is less than 360, thats fine
-            //if value is more than 720,
-            
-            //Calculate calibrated angle
-            if(angle_maze >= zeroangle)
-            {
-                angle_actual_maze = angle_maze - zeroangle;
-            }
-
-            else if(angle_maze < zeroangle)
-            {
-                angle_actual_maze = 360 - (zeroangle - angle_maze);
-            }
-            
-
-            //double radius = Math.Sqrt((x_coor * x_coor) + (y_coor * y_coor))/2;
-            //double angle = Convert.ToDouble(angle_maze);
-            //unit_circle_x =  150 + (radius * Math.Cos(angle_maze));
-            //unit_circle_y =  (radius * Math.Sin(angle_maze));
-
-            // =============== Calculate X and Y Displacement
-            
-
-            x_disp = x_coor - zerox;
-            y_disp = y_coor - zeroy;
-
-
-            // =============== Calculate oxy_plot X and Y
-
-
-
-
-
-
-
-
-            
-
-
-            if (PIXY_graph_en_state == true && PIXY_graph_clear_state == false)
-            {
-                await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.High, () =>
-                {
-                    if(oxyplot_x > 0 && oxyplot_y > 0)
-                    {
-                        (model2.Series[0] as LineSeries).Points.Add(new DataPoint(oxyplot_x, oxyplot_y));
-                        model2.InvalidatePlot(true);
-                    }
-                    
-                    
-                });
-            }
-            
-        }
 
         ///------------------------------------------ UI ACTION BUTTON FUNCTIONS -------------------------------------------------------
-
-        private void streamSwitch_Toggled(object sender, RoutedEventArgs e) {
-            if (streamSwitch.IsOn) {
-                stream_state = true;
-                sensorfusion.EulerAngles.Start();                
-                sensorfusion.Start();
-            } else {
-                sensorfusion.Stop();
-                sensorfusion.EulerAngles.Stop();
-            }
-        }
-
-        private void IMU_graph_en_Toggled(object sender, RoutedEventArgs e)
-        {
-            if (IMU_graph_en.IsOn)
-            {
-                IMU_graph_en_state = true;
-            }
-
-            else
-            {
-                IMU_graph_en_state = false;
-            }
-        }
-
-        private void arduino_initSwitch_Toggled(object sender, RoutedEventArgs e)
-        {
-            if (arduino_initSwitch.IsOn)
-            {                
-                InitializeConnection();                
-            }
-            else
-            {                
-                //Do Nothing
-            }
-        }
-
-        private void arduino_readSwitch_Toggled(object sender, RoutedEventArgs e)
-        {
-            if (arduino_readSwitch.IsOn)
-            {                
-                Read_Serial_data();
-            }
-
-            else
-            {
-                //Do Nothing
-            }
-        }
-
-        private void PIXY_graph_en_Toggled(object sender, RoutedEventArgs e)
-        {
-            if (PIXY_graph_en.IsOn)
-            {
-                PIXY_graph_en_state = true;
-            }
-
-            else
-            {
-                PIXY_graph_en_state = false;
-            }
-        }
-
-        private void zero_set_Click(object sender, RoutedEventArgs e)
-        {
-            zerox = x_coor;
-            zeroy = y_coor;
-            zeroangle = angle_maze;
-        }
-
-        private void graph_clear_Click(object sender, RoutedEventArgs e)
-        {
-            //Extend scope so model2 can be seen
-            var model2 = (DataContext as MainViewModel).MazePosModel;
-
-            //Disable the graph
-            PIXY_graph_clear_state = true;
-
-            //Reset Everything?
-            model2.Axes[0].Reset();
-            model2.Axes[1].Reset();
-            model2.Series.Clear();
-            model2.ResetAllAxes();
-            model2.InvalidatePlot(true);
-
-            //Reintialise graph properties
-            model2.Series.Add(new LineSeries
-            { //W-AXIS TITLE
-                MarkerStroke = OxyColor.FromRgb(1, 0, 0),
-                LineStyle = LineStyle.Solid,
-                Title = "Current Position"
-            });
-            model2.Series.Add(new LineSeries
-            { //W-AXIS TITLE
-                MarkerStroke = OxyColor.FromRgb(0, 1, 0),
-                LineStyle = LineStyle.Solid,
-                Title = ""
-            });
-            model2.Axes.Add(new LinearAxis //Y Axis
-            { //AXIS PROPERTIES
-                Position = AxisPosition.Left,
-                MajorGridlineStyle = LineStyle.Solid,
-                AbsoluteMinimum = 0,
-                AbsoluteMaximum = 400,
-                Minimum = 0,
-                Maximum = 400,
-                Title = "Y Pixels"
-            });
-            model2.Axes.Add(new LinearAxis //X Axis
-            {
-                IsPanEnabled = false,
-                Position = AxisPosition.Bottom,
-                MajorGridlineStyle = LineStyle.Solid,
-                AbsoluteMinimum = 0,
-                Minimum = 0,
-                Maximum = 400,
-                Title = "X Pixels"
-            });
-
-            //Draw Graph
-            Draw_X_Maze_plot();
-
-            //Re-enable graph
-            PIXY_graph_clear_state = false;            
-
-        }
-
-        private async Task Draw_X_Maze_plot()
-        {
-            var model2 = (DataContext as MainViewModel).MazePosModel;
-            await CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
-            {
-                (model2.Series[1] as LineSeries).Points.Add(new DataPoint(200  - arm_width / 2, 200  + arm_width / 2)); //A
-                (model2.Series[1] as LineSeries).Points.Add(new DataPoint(200  - arm_width / 2, 200  + arm_length)); //B
-                (model2.Series[1] as LineSeries).Points.Add(new DataPoint(200  + arm_width / 2, 200  + arm_length)); //C
-                (model2.Series[1] as LineSeries).Points.Add(new DataPoint(200  + arm_width / 2, 200  + arm_width / 2)); //D                
-                (model2.Series[1] as LineSeries).Points.Add(new DataPoint(200  + arm_length, 200  + arm_width / 2)); //E
-                (model2.Series[1] as LineSeries).Points.Add(new DataPoint(200  + arm_length, 200 - arm_width / 2)); //F
-                (model2.Series[1] as LineSeries).Points.Add(new DataPoint(200  + arm_width / 2, 200  - arm_width / 2)); //G
-                (model2.Series[1] as LineSeries).Points.Add(new DataPoint(200  + arm_width / 2, 200  - arm_length)); //H                
-                (model2.Series[1] as LineSeries).Points.Add(new DataPoint(200  - arm_width / 2, 200  - arm_length)); //I
-                (model2.Series[1] as LineSeries).Points.Add(new DataPoint(200  - arm_width / 2, 200  - arm_width / 2)); //J
-                (model2.Series[1] as LineSeries).Points.Add(new DataPoint(200  - arm_length, 200  - arm_width / 2)); //K
-                (model2.Series[1] as LineSeries).Points.Add(new DataPoint(200  - arm_length, 200  + arm_width / 2)); //L
-                (model2.Series[1] as LineSeries).Points.Add(new DataPoint(200 - arm_width / 2, 200 + arm_width / 2)); //A
-                model2.InvalidatePlot(true);
-            });
-        }
-
-        private void TextBlock_SelectionChanged(object sender, RoutedEventArgs e)
-        {
-            //Where did this come from?
-        }
-
+                
         private async void back_Click(object sender, RoutedEventArgs e)
         {
             if (!metawear.InMetaBootMode)
@@ -747,8 +203,206 @@ namespace RealTimeGraph {
             }
             Frame.GoBack();
         }
-
         
+        //========== Section 1 Connection ==========
+        private void arduino_initSwitch_Toggled(object sender, RoutedEventArgs e)
+        {
+            /*  Functions:  1. Establish Connection with Arduino(s)           
+             */
+            if (arduino_initSwitch.IsOn)
+            {
+                Serial_InitializeConnection();
+            }
+            else
+            {
+                //Destroy Connections
+
+            }
+        }
+
+        //========== Section 2 Stream ==========
+        private void IMUstreamSwitch_Toggled(object sender, RoutedEventArgs e) {
+            /*  Functions:  1. Enable the pathway of Euler Angles
+             *              2. Start Streaming of data to computer
+             */
+            if (IMUstreamSwitch.IsOn)
+            {
+                IMU_stream_state = true;
+                //IMU_Euler_enable();
+                sensorfusion.EulerAngles.Start();
+                sensorfusion.Start();
+            }
+
+            else
+            {
+                IMU_stream_state = false;
+                sensorfusion.Stop();
+                sensorfusion.EulerAngles.Stop();
+            }
+            
+        }
+
+        private void arduino_readSwitch_Toggled(object sender, RoutedEventArgs e)
+        {
+            /*  Functions:  1. Start streaming serial data into the buffer arrays when enabled and process data
+             */
+            if (arduino_readSwitch.IsOn)
+            {
+                Read_Serial_data();
+                serial_stream_state = true;
+            }
+
+
+            else
+            {
+                serial_stream_state = false;
+            }
+        }
+
+        //========== Section 3 Calibrate ==========
+        private void zero_set_Click(object sender, RoutedEventArgs e)
+        {
+            /*  Functions:  1. Set zero points of x, y and euler
+             */
+            zerox = 77;
+            zeroy = 110;
+            zeroangle = angle_maze;
+            toggle_zero_set_success = true;
+        }
+        
+
+        //========== Section 4 Output Settings ==========
+        private void data_record_en_switch_Toggled(object sender, RoutedEventArgs e)
+        {
+            /*  Functions:  1. Enable data record. This toggles value within IMU_adddataroute
+             */
+            if (data_record_en_switch.IsOn)
+            {
+                data_save_en = true;
+            }
+
+            else
+            {
+                data_save_en = false;
+            }
+        }
+
+        private void PIXY_plot_hist_en_switch_Toggled(object sender, RoutedEventArgs e)
+        {
+            /*  Functions:  1. Enable data record. This toggles value of showing history on screen. Turning off should clear the on screen
+             */
+            //if (PIXY_plot_hist_switch.IsOn)
+            //{
+            //    plot_mode_hist_en = true;
+            //    toggle_plot_hist_set_success = true;
+            //}
+
+            //else
+            //{
+            //    if(plot_mode_hist_en == true)
+            //    {
+            //        //Clear the graph
+            //        //oxyplot_clear();
+            //    }
+            //    plot_mode_hist_en = false;
+            //}
+
+        }
+
+        private void IMU_plot_en_switch_Toggled(object sender, RoutedEventArgs e)
+        {
+            if (IMU_plot_en_switch.IsOn)
+            {
+                IMU_graph_en_state = true;
+                toggle_IMU_plot_en_success = true;
+            }
+
+            else
+            {
+                IMU_graph_en_state = false;
+            }
+        }
+
+        //private void PIXY_plot_en_switch_Toggled(object sender, RoutedEventArgs e)
+        //{
+        //    if (PIXY_plot_en_switch.IsOn)
+        //    {
+        //        PIXY_plot_en_state = true;
+        //        toggle_PIXY_plot_en_success = true;
+        //    }
+
+        //    else
+        //    {
+        //        PIXY_plot_en_state = false;                
+        //    }
+        //}
+
+        //========== Section 5 Trial Start/Stop ==========
+        private void trial_start_btn_Click(object sender, RoutedEventArgs e)
+        {
+            trial_active = true;
+            Trial_start();
+        }
+
+        private void trial_stop_btn_Click(object sender, RoutedEventArgs e)
+        {
+            trial_active = false;
+            Trial_stop();
+        }
+
+        private void plot_clear_Click(object sender, RoutedEventArgs e)
+        {
+            oxyplot_clear();
+        }
+
+        private void plot_save_click(object sender, RoutedEventArgs e)
+        {
+            save_oxyplot();
+        }
+
+        //========== Section xxx Trial LED Control ==========
+        private void btn_LED_off_Click(object sender, RoutedEventArgs e)
+        {
+            IMU_NeoPixel(0);
+        }
+
+        private void btn_LED_green_Click(object sender, RoutedEventArgs e)
+        {
+            IMU_NeoPixel(1);
+        }
+
+        private void btn_LED_blue_Click(object sender, RoutedEventArgs e)
+        {
+            IMU_NeoPixel(2);
+        }
+
+        private void btn_LED_all_rand_Click(object sender, RoutedEventArgs e)
+        {
+            IMU_NeoPixel(3);
+        }
+
+        private void btn_LED_2x_rand_Click(object sender, RoutedEventArgs e)
+        {
+            IMU_NeoPixel(4);
+        }
+
+
+
+        //========== Section xxx Trial Reward Control ==========
+        private void btn_Reward_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
+
+
+
+
+        //========== Section xxx Trial Status Control ==========
+
+
+
+
+
     }
 }
 

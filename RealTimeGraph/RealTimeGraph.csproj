@@ -95,6 +95,10 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
+    <Compile Include="AT Public Variables.cs" />
+    <Compile Include="AT UI.cs" />
+    <Compile Include="AT Utilities.cs" />
+    <Compile Include="AT Sensor Comms.cs" />
     <Compile Include="LineGraph.xaml.cs">
       <DependentUpon>LineGraph.xaml</DependentUpon>
     </Compile>
